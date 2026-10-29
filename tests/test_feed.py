@@ -8,7 +8,22 @@ import pytest
 from datetime import datetime, timedelta, timezone
 from app import create_app, db
 from models import User, Song, ListeningEvent, friendships
+import services.feed_service as feed_service
 from services.feed_service import get_friends_listening_now
+
+# Fixed "now" (09:00 UTC) so a listen at 23:00 the previous night is only 10h old,
+# i.e. inside a rolling 24h window, whatever time the suite actually runs.
+FROZEN_NOW = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def frozen_now(monkeypatch):
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return FROZEN_NOW if tz else FROZEN_NOW.replace(tzinfo=None)
+
+    monkeypatch.setattr(feed_service, "datetime", FrozenDatetime)
 
 
 @pytest.fixture
@@ -43,7 +58,7 @@ def _listen(ids, who, when):
 
 
 def _start_of_today():
-    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    return FROZEN_NOW.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def test_listen_from_yesterday_evening_is_excluded(app, ids):
