@@ -11,7 +11,7 @@ I used Claude Code (an AI coding assistant in my editor/terminal) throughout. Th
 
 **Where I had to verify or course-correct:**
 - My first reproduction of Issue #2 was inconclusive: the seed data already contained a fresh 10-minute-old listen for darius, so he appeared in the feed for the wrong reason. I cleared his events and inserted one at 23:00 the previous night, which gave a clean reproduction.
-- While reproducing Issue #5, the "add a song" step from darius's report crashed with `IntegrityError: NOT NULL constraint failed: playlist_entries.position`. The AI's first read could have been that this was the cause of the missing song, but the seeded rows were all present in the table and the endpoint still returned 6 of 7, so it was a separate problem. I kept it out of the fix and recorded it in the Issue #5 entry.
+- While reproducing Issue #5, the "add a song" step from darius's report crashed with `IntegrityError: NOT NULL constraint failed: playlist_entries.position`. It would be easy to assume this crash was the cause of the missing song, but the seeded rows were all present in the table and the endpoint still returned 6 of 7, so it was a separate problem. I kept it out of the fix and recorded it in the Issue #5 entry.
 - For Issue #3, I used the existing failing test and counted results for songs with 0, 1 and 3 tags (1, 1, 3) to verify the join-per-tag explanation rather than relying on the AI's description.
 - The AI generated the fixes and regression tests; I reviewed each diff and, for the new tests, ran them with the fix reverted to confirm they fail on the buggy code.
 
