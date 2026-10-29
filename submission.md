@@ -2,13 +2,18 @@
 
 ## AI Usage
 
-I worked on this project with Claude Code (an AI coding assistant running in my editor/terminal). Specifically:
+I used Claude Code (an AI coding assistant in my editor/terminal) throughout. The specific things I asked it to do, and what I did with the answers:
 
-- **Orientation:** Claude read every file in the repo (`app.py`, `models.py`, all of `routes/` and `services/`, the seed script and the existing tests) and summarised each one. I used those summaries, plus my own reading of the files, to write the codebase map below.
-- **Reproduction:** Claude wrote throw-away scripts (kept outside the repo) that drive the seeded app through Flask's test client, so each bug was reproduced through the same HTTP routes the issues describe, and through direct service calls for the date-dependent streak bug.
-- **Investigation:** Claude traced each symptom from route to service function. The diagnosis for each bug is only recorded below after I checked it against the code and against the reproduction output (see each entry's "How you found the root cause").
-- **Where verification mattered:** while reproducing Issue #5 the "add a song" step crashed with an `IntegrityError` from a different code path (see the note under Issue #5), which is not one of the five reported bugs and which I did not assume was related. I also had to redo my first Issue #2 reproduction, because a freshly seeded event made the first run inconclusive.
-- **Code:** Claude proposed and applied the fixes and regression tests; I reviewed each diff and ran the test suite before each commit.
+1. **File-by-file summary for the codebase map.** I had it read `models.py`, every file in `routes/` and `services/`, and `seed_data.py`, and explain what each module is responsible for and how a rating request travels from `routes/songs.py::rate()` to `notification_service.rate_song()`. I wrote the map from those summaries after checking them against the files; for example, I confirmed in `models.py` that `playlist_entries` carries `position`, `added_by` and `added_at`, rather than trusting the summary.
+2. **Side-by-side comparison for Issue #4.** I gave it `add_to_playlist()` and `rate_song()` and asked for the structural difference between the two. It pointed out that only the first ends with a `create_notification(...)` call. I then searched the codebase for the string `song_rated` myself to confirm nothing else ever created that notification type, so the cause was a missing call, not a call that failed silently.
+3. **Explaining a date condition for Issue #1.** After reading the streak branch and noticing `today.weekday() != 6`, I asked what `weekday()` returns for Sunday. I did not accept "that matches the report" on its own; I ran `update_listening_streak` for Sat→Sun, Sun→Mon and Tue→Wed with kenji's streak at 12, and only the Sunday case reset, which confirmed the diagnosis.
+4. **Reproduction scripts.** It wrote throw-away scripts (outside the repo) that drive the seeded app through Flask's test client so each bug was reproduced via the same routes the issues use.
+
+**Where I had to verify or course-correct:**
+- My first reproduction of Issue #2 was inconclusive: the seed data already contained a fresh 10-minute-old listen for darius, so he appeared in the feed for the wrong reason. I cleared his events and inserted one at 23:00 the previous night, which gave a clean reproduction.
+- While reproducing Issue #5, the "add a song" step from darius's report crashed with `IntegrityError: NOT NULL constraint failed: playlist_entries.position`. The AI's first read could have been that this was the cause of the missing song, but the seeded rows were all present in the table and the endpoint still returned 6 of 7, so it was a separate problem. I kept it out of the fix and recorded it in the Issue #5 entry.
+- For Issue #3, I used the existing failing test and counted results for songs with 0, 1 and 3 tags (1, 1, 3) to verify the join-per-tag explanation rather than relying on the AI's description.
+- The AI generated the fixes and regression tests; I reviewed each diff and, for the new tests, ran them with the fix reverted to confirm they fail on the buggy code.
 
 ---
 
