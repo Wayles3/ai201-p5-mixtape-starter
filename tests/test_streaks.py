@@ -94,3 +94,28 @@ def test_streak_increments_on_sunday(app, user):
 
         update_listening_streak(u, sunday)
         assert u.listening_streak == 2  # Should increment, not reset
+
+
+@pytest.mark.parametrize("offset", range(7))
+def test_streak_increments_on_every_weekday(app, user, offset):
+    """Regression (Issue #1): a consecutive-day listen increments the streak
+    no matter which weekday it lands on, including Sunday."""
+    with app.app_context():
+        u = db.session.get(User, user.id)
+        day = datetime(2024, 6, 10 + offset, 12, 0, 0, tzinfo=timezone.utc)  # Mon..Sun
+        u.listening_streak = 12
+        u.last_listened_at = day
+        update_listening_streak(u, day + timedelta(days=1))
+        assert u.listening_streak == 13
+
+
+def test_streak_still_resets_when_a_day_is_skipped_into_sunday(app, user):
+    """Friday -> Sunday skips Saturday, so the streak must still reset to 1."""
+    with app.app_context():
+        u = db.session.get(User, user.id)
+        friday = datetime(2024, 6, 14, 12, 0, 0, tzinfo=timezone.utc)
+        sunday = datetime(2024, 6, 16, 12, 0, 0, tzinfo=timezone.utc)
+        u.listening_streak = 12
+        u.last_listened_at = friday
+        update_listening_streak(u, sunday)
+        assert u.listening_streak == 1
